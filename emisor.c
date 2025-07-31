@@ -101,5 +101,22 @@ int main() {
     if (sent < 0) { perror("Error enviando"); }
     else { printf("Mensaje enviado correctamente!\n"); }
     close(sockfd);
+
+    // --- GUARDAR RESULTADO EN CSV ---
+    FILE *csv = fopen("resultados_emisor.csv", "a");
+    if (csv != NULL) {
+        // Escribe encabezado si el archivo está vacío
+        fseek(csv, 0, SEEK_END);
+        long size = ftell(csv);
+        if (size == 0) {
+            fprintf(csv, "mensaje_original,tasa_error,mensaje_binario,trama_enviada\n");
+        }
+        fprintf(csv, "\"%s\",%.4f,\"%s\",\"%s\"\n",
+                mensaje, tasa_error, binario, trama);
+        fclose(csv);
+    } else {
+        perror("No se pudo abrir resultados_emisor.csv");
+    }
+
     return 0;
 }

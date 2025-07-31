@@ -1,4 +1,8 @@
 import socket
+import csv
+import os
+
+CSV_FILE = "resultados_receptor.csv"
 
 # --- ENLACE ---
 def fletcher16_binstr(data):
@@ -26,6 +30,21 @@ def mostrar_mensaje(mensaje, error=False):
     else:
         print("Mensaje recibido y verificado:", mensaje)
 
+# --- ESCRIBIR RESULTADO EN CSV ---
+def escribir_csv(trama, mensaje_ascii, error_detectado):
+    file_exists = os.path.isfile(CSV_FILE)
+    with open(CSV_FILE, 'a', newline='') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=[
+            'trama_recibida', 'mensaje_ascii', 'error_detectado'
+        ])
+        if not file_exists:
+            writer.writeheader()
+        writer.writerow({
+            'trama_recibida': trama,
+            'mensaje_ascii': mensaje_ascii,
+            'error_detectado': error_detectado
+        })
+
 # --- TRANSMISIÓN ---
 def receptor():
     host = '127.0.0.1'
@@ -49,7 +68,8 @@ def receptor():
 
     # --- ENLACE: Separar mensaje y checksum ---
     if len(trama) < 16:
-        mostrar_mensaje("", error=True)
+        print("ERROR: No fue posible recuperar el mensaje original.")
+        escribir_csv(trama, "", 1)
         return
     mensaje_bin = trama[:-16]
     c1_recv = int(trama[-16:-8], 2)
@@ -59,9 +79,14 @@ def receptor():
     if (c1, c2) == (c1_recv, c2_recv):
         # --- PRESENTACIÓN: Decodifica el mensaje ---
         mensaje_ascii = binario_a_ascii(mensaje_bin)
-        mostrar_mensaje(mensaje_ascii)
+        print("Mensaje recibido y verificado:", mensaje_ascii)
+        error_detectado = 0
     else:
-        mostrar_mensaje("", error=True)
+        mensaje_ascii = ""
+        print("ERROR: No fue posible recuperar el mensaje original.")
+        error_detectado = 1
+
+    escribir_csv(trama, mensaje_ascii, error_detectado)
 
 if __name__ == "__main__":
     receptor()
