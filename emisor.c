@@ -3,6 +3,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+
 
 #define MAX_MSG_LEN 256
 
@@ -51,6 +54,12 @@ void solicitar_mensaje(char *mensaje, double *tasa_error) {
     getchar(); // Limpia el buffer
 }
 
+void checksum_a_bin(uint16_t c1, uint16_t c2, char *checksum) {
+    for (int i = 7; i >= 0; i--) checksum[7-i] = ((c1 >> i) & 1) ? '1' : '0';
+    for (int i = 7; i >= 0; i--) checksum[15-i] = ((c2 >> i) & 1) ? '1' : '0';
+    checksum[16] = '\0';
+}
+
 int main() {
     char mensaje[MAX_MSG_LEN];
     double tasa_error;
@@ -59,33 +68,38 @@ int main() {
     // PRESENTACIÓN
     char binario[MAX_MSG_LEN * 8 + 1];
     ascii_a_binario(mensaje, binario);
-    printf("Mensaje en binario (ASCII): %s\n", binario);
 
     // ENLACE
     uint16_t c1, c2;
     fletcher16(binario, strlen(binario), &c1, &c2);
-
-    // Convierte checksum a binario de 8 bits c/u
     char checksum[17];
-    for (int i = 7; i >= 0; i--) checksum[7-i] = ((c1 >> i) & 1) ? '1' : '0';
-    for (int i = 7; i >= 0; i--) checksum[15-i] = ((c2 >> i) & 1) ? '1' : '0';
-    checksum[16] = '\0';
+    checksum_a_bin(c1, c2, checksum);
 
     char trama[MAX_MSG_LEN * 8 + 17];
     strcpy(trama, binario);
     strcat(trama, checksum);
 
-    printf("Trama + checksum: %s\n", trama);
-
     // RUIDO
     aplicar_ruido(trama, tasa_error);
-    printf("Trama después de ruido: %s\n", trama);
 
-    // Guarda en archivo
-    FILE *f = fopen("message.txt", "w");
-    fprintf(f, "%s", trama);
-    fclose(f);
+    // SOCKET - TRANSMISIÓN
+    int sockfd;
+    struct sockaddr_in serv_addr;
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0) { perror("Error creando socket"); exit(1); }
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(5000);
+    serv_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-    printf("Trama final guardada en message.txt\n");
+    if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+        perror("Error conectando al receptor");
+        close(sockfd);
+        exit(1);
+    }
+    int len = strlen(trama);
+    int sent = send(sockfd, trama, len, 0);
+    if (sent < 0) { perror("Error enviando"); }
+    else { printf("Mensaje enviado correctamente!\n"); }
+    close(sockfd);
     return 0;
 }
