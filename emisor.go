@@ -33,14 +33,15 @@ func codificarMensaje(mensaje string) string {
 	var binario strings.Builder
 	
 	for _, char := range mensaje {
-		for i := 7; i >= 0; i-- {
+		// Use 7-bit ASCII encoding (bits 6 to 0)
+		for i := 6; i >= 0; i-- {
 			bit := (int(char) >> i) & 1
 			binario.WriteString(strconv.Itoa(bit))
 		}
 	}
 	
 	resultado := binario.String()
-	fmt.Printf("[PRESENTATION] ASCII Binary: \"%s\"\n", resultado)
+	fmt.Printf("[PRESENTATION] ASCII 7-bit Binary: \"%s\"\n", resultado)
 	return resultado
 }
 

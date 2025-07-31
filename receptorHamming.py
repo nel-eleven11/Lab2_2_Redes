@@ -12,13 +12,13 @@ def mostrar_mensaje(mensaje, error=False):
 # CAPA DE PRESENTACIÓN
 def decodificar_mensaje(binario):
     chars = []
-    for i in range(0, len(binario), 8):
-        byte = binario[i:i+8]
-        if len(byte) == 8:
-            chars.append(chr(int(byte, 2)))
+    for i in range(0, len(binario), 7):
+        seven_bits = binario[i:i+7]
+        if len(seven_bits) == 7:
+            chars.append(chr(int(seven_bits, 2)))
     
     resultado = ''.join(chars)
-    print(f"[PRESENTATION] Decoded message: \"{resultado}\"")
+    print(f"[PRESENTATION] Decoded 7-bit ASCII message: \"{resultado}\"")
     return resultado
 
 # CAPA DE ENLACE - Algoritmo de Hamming
